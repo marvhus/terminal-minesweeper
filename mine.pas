@@ -213,3 +213,5 @@ begin
 
    TCSetAttr(STDIN_FILENO, TCSANOW, SavedTAttr);
 end.
+
+This is Minesweeper, but made using Free Pascal
