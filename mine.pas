@@ -123,13 +123,13 @@ begin
                    if FieldAtCursor(Field, Row, Col) then Write('[') else Write(' ');
                    if FieldIsOpen(Field, Row, Col) then
                       case FieldGet(Field, Row, Col) of
-                        Bomb: Write('*');
+                        Bomb: Write('@');
                         Empty: begin
                                   Nbors := FieldCountNbors(Field, Row, Col);
                                   if Nbors > 0 then Write(Nbors) else Write(' ');
                                end;
                       end
-                    else Write('#');
+                    else Write('.');
                    if FieldAtCursor(Field, Row, Col) then Write(']') else Write(' ');
                 end;
            WriteLn
