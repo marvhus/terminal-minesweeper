@@ -73,6 +73,17 @@ begin
    FieldRandomCell := FieldGet(Field, Row, Col);
 end;
 
+function FieldAroundCursor(Field : Field; Row, Col: Integer ): Boolean;
+var
+   DRow, DCol : Integer;
+begin
+   for DRow := -1 to 1 do
+      for DCol := -1 to 1 do
+         if (Field.CursorRow + DRow = Row) and (Field.CursorCol + DCol = Col) then
+            Exit(True);
+   FieldAroundCursor := False;
+end;
+
 procedure FieldRandomize(var Field: Field; BombsPercentage: Integer);
 var
    Index, BombsCount: Integer;
@@ -84,7 +95,7 @@ begin
    BombsCount := (Field.Rows*Field.Cols*BombsPercentage + 99) div 100;
    for Index := 1 to BombsCount do
    begin
-      while (FieldRandomCell(Field, Row, Col) = Bomb) or FieldAtCursor(Field, Row, Col) do;
+      while (FieldRandomCell(Field, Row, Col) = Bomb) or FieldAtCursor(Field, Row, Col) or FieldAroundCursor(Field, Row, Col) do;
       FieldSet(Field, Row, Col, Bomb);
    end;
 end;
