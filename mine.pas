@@ -57,6 +57,8 @@ begin
    Field.Rows := Rows;
    Field.Cols := Cols;
    for Index := 0 to Rows*Cols do Field.Open[Index] := False;
+   Field.CursorRow := 0;
+   Field.CursorCol := 0;
 end;
 
 function FieldAtCursor(Field: Field; Row, Col: Integer): Boolean;
@@ -76,8 +78,6 @@ var
    Index, BombsCount: Integer;
    Row, Col: Integer;
 begin
-   Field.CursorRow := 0;
-   Field.CursorCol := 0;
    for Index := 0 to Field.Rows*Field.Cols do Field.Cells[Index] := Empty;
    { TODO: Find a better way to prevent an infinite loop other than reducing the max percentage }
    if BombsPercentage > 90 then BombsPercentage := 90;
