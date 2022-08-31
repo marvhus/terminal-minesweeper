@@ -15,7 +15,7 @@ type
 
 function FieldIndexFromPosition(Field : Field; Row, Col : Integer ): Integer;
 begin
-   FielIndexFromPosition := Row*Field.Cols + Col;
+   FieldIndexFromPosition := Row*Field.Cols + Col;
 end;
 
 function FieldGet(Field: Field; Row, Col: Integer): Cell;
@@ -30,7 +30,7 @@ end;
 
 procedure FieldOpenAtCursor(var Field: Field);
 begin
-    Field.Open[FieldIndexFromPosition(Field, Row, Col)] := True;
+   Field.Open[FieldIndexFromPosition(Field, Field.CursorRow, Field.CursorCol)] := True;
 end;
 
 function FieldCheckedGet(Field: Field; Row, Col: Integer; var Cell: Cell): Boolean;
