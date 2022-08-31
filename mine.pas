@@ -28,9 +28,13 @@ begin
     FieldIsOpen := Field.Open[FieldIndexFromPosition(Field, Row, Col)];
 end;
 
-procedure FieldOpenAtCursor(var Field: Field);
+function FieldOpenAtCursor(var Field: Field): Cell;
+var
+   Index : Integer;
 begin
-   Field.Open[FieldIndexFromPosition(Field, Field.CursorRow, Field.CursorCol)] := True;
+   Index := FieldIndexFromPosition(Field, Field.CursorRow, Field.CursorCol);
+   Field.Open[Index] := True;
+   FieldOpenAtCursor := Field.Cells[Index];
 end;
 
 function FieldCheckedGet(Field: Field; Row, Col: Integer; var Cell: Cell): Boolean;
@@ -67,17 +71,27 @@ begin
     Field.CursorRow := 0;
     Field.CursorCol := 0;
     for Index := 0 to Field.Rows*Field.Cols do
-    begin
-        Field.Cells[Index] := Empty;
-        Field.Open[Index] := False;
-    end;
+        begin
+           Field.Cells[Index] := Empty;
+           Field.Open[Index] := False;
+        end;
     if BombsPercentage > 100 then BombsPercentage := 100;
     BombsCount := (Field.Rows*Field.Cols*BombsPercentage + 99) div 100;
     for Index := 1 to BombsCount do
-    begin
-        while FieldRandomCell(Field, Row, Col) = Bomb do;
-        FieldSet(Field, Row, Col, Bomb);
-    end;
+        begin
+           while FieldRandomCell(Field, Row, Col) = Bomb do;
+           FieldSet(Field, Row, Col, Bomb);
+        end;
+end;
+
+procedure FieldOpenEverything(var Field : Field );
+var
+   Index :  Integer;
+begin
+   for Index := 0 to Field.Rows*Field.Cols do
+      begin
+         Field.Open[Index] := True;
+      end;
 end;
 
 function FieldCountNbors(Field: Field; Row, Col: Integer): Integer;
@@ -104,23 +118,29 @@ var
     Row, Col, Nbors: Integer;
 begin
     for Row := 0 to Field.Rows-1 do
-    begin
-        for Col := 0 to Field.Cols-1 do
         begin
-           if FieldAtCursor(Field, Row, Col) then Write('[') else Write(' ');
-           if FieldIsOpen(Field, Row, Col) then
-              case FieldGet(Field, Row, Col) of
-                Bomb: Write('*');
-                Empty: begin
-                        Nbors := FieldCountNbors(Field, Row, Col);
-                        if Nbors > 0 then Write(Nbors) else Write(' ');
-                       end;
-              end
-            else Write('#');
-           if FieldAtCursor(Field, Row, Col) then Write(']') else Write(' ');
+           for Col := 0 to Field.Cols-1 do
+                begin
+                   if FieldAtCursor(Field, Row, Col) then Write('[') else Write(' ');
+                   if FieldIsOpen(Field, Row, Col) then
+                      case FieldGet(Field, Row, Col) of
+                        Bomb: Write('*');
+                        Empty: begin
+                                  Nbors := FieldCountNbors(Field, Row, Col);
+                                  if Nbors > 0 then Write(Nbors) else Write(' ');
+                               end;
+                      end
+                    else Write('#');
+                   if FieldAtCursor(Field, Row, Col) then Write(']') else Write(' ');
+                end;
+           WriteLn
         end;
-       WriteLn
-    end
+end;
+
+procedure CursorBack(Field : Field );
+begin
+   Write(Chr(27), '[', Field.Rows,   'A');
+   Write(Chr(27), '[', Field.Cols*3, 'D');
 end;
 
 const
@@ -152,14 +172,24 @@ begin
    begin
       Read(Cmd);
       case Cmd of
-         'w': if MainField.CursorRow > 0                then dec(MainField.CursorRow);
-         's': if MainField.CursorRow < MainField.Rows-1 then inc(MainField.CursorRow);
-         'a': if MainField.CursorCol > 0                then dec(MainField.CursorCol);
-         'd': if MainField.CursorCol < MainField.Cols-1 then inc(MainField.CursorCol);
-         ' ': FieldOpenAtCursor(MainField);
+        'w': if MainField.CursorRow > 0                then dec(MainField.CursorRow);
+        's': if MainField.CursorRow < MainField.Rows-1 then inc(MainField.CursorRow);
+        'a': if MainField.CursorCol > 0                then dec(MainField.CursorCol);
+        'd': if MainField.CursorCol < MainField.Cols-1 then inc(MainField.CursorCol);
+        ' ': if FieldOpenAtCursor(MainField) = Bomb    then
+           begin
+              FieldOpenEverything(MainField);
+
+              CursorBack(MainField);
+              FieldWrite(MainField);
+
+              WriteLn('Game Over!');
+
+              Quit := True;
+              Exit;
+           end;
       end;
-      Write(Chr(27), '[', MainField.Rows,   'A');
-      Write(Chr(27), '[', MainField.Cols*3, 'D');
+      CursorBack(MainField);
       FieldWrite(MainField);
    end;
 end.
