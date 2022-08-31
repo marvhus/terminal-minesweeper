@@ -147,7 +147,7 @@ const
 var
    MainField: Field;
    Quit: Boolean = False;
-   TAttr: Termios;
+   SavedTAttr, TAttr: Termios;
    Cmd: Char;
 begin
    Randomize;
@@ -160,10 +160,11 @@ begin
       Exit;
    end;
    TCGetAttr(STDIN_FILENO, TAttr);
+   TCGetAttr(STDIN_FILENO, SavedTAttr);
    TAttr.c_lflag := TAttr.c_lflag and (not (ICANON or ECHO));
    TAttr.c_cc[VMIN] := 1;
    TAttr.c_cc[VTIME] := 0;
-   TCSetAttr(STDIN_FILENO, TCSAFLUSH, &tattr);
+   TCSetAttr(STDIN_FILENO, TCSAFLUSH, TAttr);
 
    FieldWrite(MainField);
 
@@ -185,10 +186,12 @@ begin
               WriteLn('Game Over!');
 
               Quit := True;
-              Exit;
+              break;
            end;
       end;
       CursorBack(MainField);
       FieldWrite(MainField);
    end;
+
+   TCSetAttr(STDIN_FILENO, TCSANOW, SavedTAttr);
 end.
