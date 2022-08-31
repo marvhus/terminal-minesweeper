@@ -84,14 +84,13 @@ begin
         end;
 end;
 
-procedure FieldOpenEverything(var Field : Field );
+procedure FieldOpenBombs(var Field : Field );
 var
    Index :  Integer;
 begin
    for Index := 0 to Field.Rows*Field.Cols do
-      begin
+      if Field.Cells[Index] = Bomb then
          Field.Open[Index] := True;
-      end;
 end;
 
 function FieldCountNbors(Field: Field; Row, Col: Integer): Integer;
@@ -178,7 +177,7 @@ begin
         'd': if MainField.CursorCol < MainField.Cols-1 then inc(MainField.CursorCol);
         ' ': if FieldOpenAtCursor(MainField) = Bomb    then
            begin
-              FieldOpenEverything(MainField);
+              FieldOpenBombs(MainField);
 
               CursorBack(MainField);
               FieldWrite(MainField);
