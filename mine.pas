@@ -4,15 +4,16 @@ uses Termio;
 
 { Types used for this game }
 type
-   Cell = (Empty, Bomb);
-   Field = record
-              Cells: array of Cell;
-              Open: array of Boolean;
-              Rows: Integer;
-              Cols: Integer;
-              CursorRow: Integer;
-              CursorCol: Integer;
-           end;
+   Cell   = (Empty, Bomb);
+   Status = (Open, Closed, Flag);
+   Field  = record
+               Cells      : array of Cell;
+               Visibility : array of Status;
+               Rows       : Integer;
+               Cols       : Integer;
+               CursorRow  : Integer;
+               CursorCol  : Integer;
+            end;
 
 { Converts a Row, and Col position to an index in the Field.Cells array for the given field }
 function FieldIndexFromPosition(Field : Field; Row, Col : Integer ): Integer;
@@ -27,19 +28,22 @@ begin
 end;
 
 { Check if the Cell in the given Row, and Col position is open }
-function FieldIsOpen(Field: Field; Row, Col: Integer): Boolean;
+function FieldGetVisibility(Field: Field; Row, Col: Integer): Status;
 begin
-   FieldIsOpen := Field.Open[FieldIndexFromPosition(Field, Row, Col)];
+   FieldGetVisibility := Field.Visibility[FieldIndexFromPosition(Field, Row, Col)];
 end;
 
 { Open the Cell at the cursor position, and return the cell  }
-function FieldOpenAtCursor(var Field: Field): Cell;
+function FieldSetVisibilityAtCursor(var Field : Field; VisibilityStatus : Status): Cell;
 var
    Index : Integer;
 begin
+   { Calculate index }
    Index := FieldIndexFromPosition(Field, Field.CursorRow, Field.CursorCol);
-   Field.Open[Index] := True;
-   FieldOpenAtCursor := Field.Cells[Index];
+   { Set visibility }
+   Field.Visibility[Index] := VisibilityStatus;
+   { Return cell value at cursor }
+   FieldSetVisibilityAtCursor := Field.Cells[Index];
 end;
 
 { Check if given Row, and Col position is within bounds, and gives the cell velue through the given cell referance. Also it returns a boolean saying if it was within bounds or not }
@@ -60,15 +64,15 @@ procedure FieldResize(var Field: Field; Rows, Cols: Integer);
 var
    Index : Integer;
 begin
-   { Resizes Cells }
+   { Resizes Field.Cells }
    SetLength(Field.Cells, Rows*Cols);
-   { Resizes Open }
-   SetLength(Field.Open, Rows*Cols);
+   { Resizes Field.Visibility }
+   SetLength(Field.Visibility, Rows*Cols);
    { Sets the new Width/Height (Rows/Cols) }
    Field.Rows := Rows;
    Field.Cols := Cols;
    { Sets all cells as not open }
-   for Index := 0 to Rows*Cols do Field.Open[Index] := False;
+   for Index := 0 to Rows*Cols do Field.Visibility[Index] := Closed;
    { Resets cursor position }
    Field.CursorRow := 0;
    Field.CursorCol := 0;
@@ -120,14 +124,14 @@ begin
    end;
 end;
 
-{ Open all the cells that are bombs }
+{ Change the vilibility of all the cells that are bombs to Open }
 procedure FieldOpenBombs(var Field : Field );
 var
    Index :  Integer;
 begin
    for Index := 0 to Field.Rows*Field.Cols do
       if Field.Cells[Index] = Bomb then
-         Field.Open[Index] := True;
+         Field.Visibility[Index] := Open;
 end;
 
 { Count the neighbouring bomb cells }
@@ -154,7 +158,8 @@ end;
 { Print out the field }
 procedure FieldWrite(Field: Field);
 var
-   Row, Col, Nbors: Integer;
+   Row, Col, Nbors  : Integer;
+   VisibilityStatus : Status;
 begin
    { Loop rows }
    for Row := 0 to Field.Rows-1 do
@@ -165,15 +170,21 @@ begin
          { Wrap cursor pos with [  ] }
          if FieldAtCursor(Field, Row, Col) then Write('[') else Write(' ');
          { if field ope, print '@' for bomb, ' ' for empty, '.' for closed' }
-         if FieldIsOpen(Field, Row, Col) then
-            case FieldGet(Field, Row, Col) of
-              Bomb: Write('@');
-              Empty: begin
-                        { if the empty cell has neighboring bombs, show the amount of neighboring bombs instead }
-                        Nbors := FieldCountNbors(Field, Row, Col);
-                        if Nbors > 0 then Write(Nbors) else Write(' ');
+         VisibilityStatus := FieldGetVisibility(Field, Row, Col);
+         case VisibilityStatus of
+           Open : begin
+                     case FieldGet(Field, Row, Col) of
+                       Bomb  : Write('@');
+                       Empty : begin
+                                  { if the empty cell has neighboring bombs, show the amount of neighboring bombs instead }
+                                  Nbors := FieldCountNbors(Field, Row, Col);
+                                  if Nbors > 0 then Write(Nbors) else Write(' ');
+                               end;
                      end;
-            end else Write('.');
+                  end;
+           Closed : Write('.');
+           Flag   : Write('F');
+         end;
          { Wrap cursor pos with [  ] }
          if FieldAtCursor(Field, Row, Col) then Write(']') else Write(' ');
       end;
@@ -230,10 +241,17 @@ begin
       { Handle input }
       case Cmd of
         { move cursor }
-        'w': if MainField.CursorRow > 0                then dec(MainField.CursorRow);
-        's': if MainField.CursorRow < MainField.Rows-1 then inc(MainField.CursorRow);
-        'a': if MainField.CursorCol > 0                then dec(MainField.CursorCol);
-        'd': if MainField.CursorCol < MainField.Cols-1 then inc(MainField.CursorCol);
+        'w' : if MainField.CursorRow > 0                then dec(MainField.CursorRow);
+        's' : if MainField.CursorRow < MainField.Rows-1 then inc(MainField.CursorRow);
+        'a' : if MainField.CursorCol > 0                then dec(MainField.CursorCol);
+        'd' : if MainField.CursorCol < MainField.Cols-1 then inc(MainField.CursorCol);
+        { flag cell }
+        '.': begin
+           case FieldGetVisibility(MainField, MainField.CursorRow, MainField.CursorCol) of
+             Closed : FieldSetVisibilityAtCursor(MainField, Flag);
+             Flag   : FieldSetVisibilityAtCursor(MainField, Closed);
+           end;
+        end;
         { show cell }
         ' ': begin
            { if this is the first cell, generate/randomize the field }
@@ -243,7 +261,7 @@ begin
               First := False;
            end;
            { if the opened cell is a bomb, game over }
-           if FieldOpenAtCursor(MainField) = Bomb    then
+           if FieldSetVisibilityAtCursor(MainField, Open) = Bomb    then
            begin
               { open all the fields with bombs in them }
               FieldOpenBombs(MainField);

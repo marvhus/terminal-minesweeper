@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-rm -rf mine mine.o
+rm -rf mine.o
 
 fpc mine.pas
 
